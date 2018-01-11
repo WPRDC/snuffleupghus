@@ -1,6 +1,10 @@
 import sys, csv, requests
+from marshmallow import fields, pre_load, post_load
 
 from pprint import pprint
+
+sys.path.insert(0, '/Users/drw/WPRDC/etl-dev/wprdc-etl') # A path that we need to import code from
+import pipeline as pl
 
 def write_to_csv(filename,list_of_dicts,keys):
     with open(filename, 'wb') as output_file:
@@ -12,7 +16,7 @@ def write_to_csv(filename,list_of_dicts,keys):
 def parse_file(filepath):
     # Use local file
     f = open(filepath,'r')
-    f.next() # Skip the first line, since it gives the delimiter.
+    f.readline() #f.next() # Skip the first line, since it gives the delimiter.
     reader = csv.DictReader(f, delimiter='|', quotechar='"') 
     list_of_dicts = list(reader) 
     f.close()
@@ -47,7 +51,11 @@ def fuse_cats(e,d):
         d['category'] = "{}|{}".format(cat1,cat2)
     return d
 
-def main():
+def main(**kwargs):
+    if 'events_fields' in kwargs:
+        events_fields = kwargs['events_fields']
+    else:
+        events_fields = None
 
 
     # Down here in the main function, fetch all three CSV files with requests.
@@ -61,8 +69,9 @@ def main():
     else:
         r = requests.get("http://bigburgh.com/csvdownload/events.csv")
         events_shelf = r.json()
-#"http://bigburgh.com/csvdownload/safePlaces.csv"
-#"http://bigburgh.com/csvdownload/services.csv"
+
+    #"http://bigburgh.com/csvdownload/safePlaces.csv"
+    #"http://bigburgh.com/csvdownload/services.csv"
 
     events = [] 
     # Reformat their field names.
@@ -83,11 +92,42 @@ def main():
         d = fuse_cats(e,d)
 
         events.append(d)
-    events_fields = ['event_name','recurrence','program_or_facility','neighborhood','address','latitude','longitude','organization','category','recommended_for','event_phone','event_narrative','schedule','holiday_exception']
+    #events_fields = ['event_name','recurrence','program_or_facility','neighborhood','address','latitude','longitude','organization','category','recommended_for','event_phone','event_narrative','schedule','holiday_exception']
     # Then bring in the schema and ETL framework.
+    schema = EventsSchema
+    events_fields = schema().serialize_to_ckan_fields() 
 
+
+
+class EventsSchema(pl.BaseSchema): 
+    event_name = fields.String(allow_none=False)
+    recurrence = fields.String()
+    program_or_facility = fields.String()
+    neighborhood = fields.String()
+    address = fields.String()
+    latitude = fields.Float()
+    longitude = fields.Float()
+    organization = fields.String()
+    category = fields.String()
+    recommended_for = fields.String()
+    event_phone = fields.String()
+    event_narrative = fields.String()
+    schedule = fields.String()
+    holiday_exception = fields.String()
+    # Never let any of the key fields have None values. It's just asking for
+    # multiplicity problems on upsert.
+
+    # [Note that since this script is taking data from CSV files, there should be no
+    # columns with None values. It should all be instances like [value], [value],, [value],...
+    # where the missing value starts as as a zero-length string, which this script
+    # is then responsible for converting into something more appropriate.
+
+schema = EventsSchema
+fields0 = schema().serialize_to_ckan_fields()
+fields_to_publish = fields0
+print("fields_to_publish = {}".format(fields_to_publish))
 
 if __name__ == '__main__':
     print(len(sys.argv))
     if len(sys.argv) == 2:
-        main() # Make this the default.
+        main(events_fields=fields0) # Make this the default.
