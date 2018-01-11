@@ -121,6 +121,8 @@ class EventsSchema(pl.BaseSchema):
     # columns with None values. It should all be instances like [value], [value],, [value],...
     # where the missing value starts as as a zero-length string, which this script
     # is then responsible for converting into something more appropriate.
+    class Meta:
+        ordered = True
 
 schema = EventsSchema
 fields0 = schema().serialize_to_ckan_fields()
