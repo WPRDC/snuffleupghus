@@ -1,3 +1,5 @@
 base.py
 *.pyc
 *.swp
+parameters/
+tmp/
