@@ -114,12 +114,93 @@ def fuse_cats(e,d):
         d['category'] = "{}|{}".format(cat1,cat2)
     return d
 
-def main(**kwargs):
-    if 'events_fields' in kwargs:
-        events_fields = kwargs['events_fields']
-    else:
-        events_fields = None
+def transmit(**kwargs):
+    target = kwargs.pop('target') # raise ValueError('Target file must be specified.')
+    update_method = kwargs.pop('update_method','upsert')
+    if 'schema' not in kwargs:
+        raise ValueError('A schema must be given to pipe the data to CKAN.')
+    schema = kwargs.pop('schema')
+    key_fields = kwargs['key_fields']
+    if 'fields_to_publish' not in kwargs:
+        raise ValueError('The fields to be published have not been specified.')
+    fields_to_publish = kwargs.pop('fields_to_publish')
+    server = kwargs.pop('server', 'your-new-favorite-dataset') #'production')
+    pipe_name = kwargs.pop('pipe_name', 'generic_pipeline_name')
+    clear_first = kwargs.pop('clear_first', False) # If this parameter is true,
+    # the datastore will be deleted (leaving the resource intact).
 
+    log = open('uploaded.log', 'w+')
+
+
+    # There's two versions of kwargs running around now: One for passing to transmit, and one for passing to the pipeline.
+    # Be sure to pop all transmit-only arguments off of kwargs to prevent them being passed as pipepline parameters.
+
+    # Code below stolen from prime_ckan/*/open_a_channel() but really from utility_belt/gadgets
+    #with open(os.path.dirname(os.path.abspath(__file__))+'/ckan_settings.json') as f: # The path of this file needs to be specified.
+    with open(SETTINGS_FILE) as f:
+        settings = json.load(f)
+    site = settings['loader'][server]['ckan_root_url']
+    package_id = settings['loader'][server]['package_id']
+    API_key = settings['loader'][server]['ckan_api_key']
+
+    if 'resource_name' in kwargs:
+        resource_specifier = kwargs['resource_name']
+    #    original_resource_id = find_resource_id(site,package_id,kwargs['resource_name'],API_key)
+    else:
+        resource_specifier = kwargs['resource_id']
+    #    original_resource_id = kwargs['resource_id']
+
+    #try:
+    #    original_url = get_resource_parameter(site,original_resource_id,'url',API_key)
+    #except RuntimeError:
+    #    original_url = None
+    # It's conceivable that original_resource_id may not match resource_id (obtained
+    # below), in instances where the resource needs to be created by the pipeline.
+        # Does this original_url stuff need to be done here?
+            # Let's assume that it doesn't for now.
+
+    print("Preparing to pipe data from {} to resource {} package ID {} on {}".format(target,resource_specifier,package_id,site))
+    time.sleep(1.0)
+
+    print("fields_to_publish = {}".format(fields_to_publish))
+    a_pipeline = pl.Pipeline(pipe_name,
+                              pipe_name,
+                              log_status=False,
+                              settings_file=SETTINGS_FILE,
+                              settings_from_file=True,
+                              start_from_chunk=0
+                              ) \
+        .connect(pl.FileConnector, target, encoding='utf-8') \
+        .extract(pl.CSVExtractor, firstline_headers=True) \
+        .schema(schema) \
+        .load(pl.CKANDatastoreLoader, server,
+              fields=fields_to_publish,
+              clear_first=clear_first,
+              #package_id=package_id,
+              #resource_id=resource_id,
+              #resource_name=resource_name,
+              #key_fields=['dtd','lien_description','tax_year','pin','block_lot','assignee'],
+              # A potential problem with making the pin field a key is that one property
+              # could have two different PINs (due to the alternate PIN) though I
+              # have gone to some lengths to avoid this.
+              method=update_method,
+              **kwargs).run()
+
+    if 'resource_name' in kwargs:
+        resource_id = find_resource_id(site,package_id,kwargs['resource_name'],API_key)
+    else:
+        resource_id = kwargs['resource_id']
+
+    if a_pipeline.upload_complete:
+        print("Piped data to {} on the {} server".format(resource_specifier,server))
+        log.write("Finished {}ing {}\n".format(re.sub('e$','',update_method),resource_specifier))
+        log.close()
+        return resource_id
+    else:
+        print("Something went wrong.")
+        return None
+
+def main(**kwargs):
 
     # Down here in the main function, fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
@@ -157,42 +238,15 @@ def main(**kwargs):
         events.append(d)
     #events_fields = ['event_name','recurrence','program_or_facility','neighborhood','address','latitude','longitude','organization','category','recommended_for','event_phone','event_narrative','schedule','holiday_exception']
     # Then bring in the schema and ETL framework.
+    pprint(events[0])
     schema = EventsSchema
     events_fields = schema().serialize_to_ckan_fields() 
-
-
-
-class EventsSchema(pl.BaseSchema): 
-    event_name = fields.String(allow_none=False)
-    recurrence = fields.String()
-    program_or_facility = fields.String()
-    neighborhood = fields.String()
-    address = fields.String()
-    latitude = fields.Float()
-    longitude = fields.Float()
-    organization = fields.String()
-    category = fields.String()
-    recommended_for = fields.String()
-    event_phone = fields.String()
-    event_narrative = fields.String()
-    schedule = fields.String()
-    holiday_exception = fields.String()
-    # Never let any of the key fields have None values. It's just asking for
-    # multiplicity problems on upsert.
-
-    # [Note that since this script is taking data from CSV files, there should be no
-    # columns with None values. It should all be instances like [value], [value],, [value],...
-    # where the missing value starts as as a zero-length string, which this script
-    # is then responsible for converting into something more appropriate.
-    class Meta:
-        ordered = True
-
-schema = EventsSchema
-fields0 = schema().serialize_to_ckan_fields()
-fields_to_publish = fields0
-print("fields_to_publish = {}".format(fields_to_publish))
+    resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
+        fields_to_publish = events_fields, key_fields = ['event_name'],
+        pipe_name = 'BigBurghEvents', resource_name = 'Events from BigBurgh')
+        
 
 if __name__ == '__main__':
     print(len(sys.argv))
     if len(sys.argv) == 2:
-        main(events_fields=fields0) # Make this the default.
+        main() # Make this the default.
