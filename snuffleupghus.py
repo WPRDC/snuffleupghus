@@ -7,7 +7,7 @@ sys.path.insert(0, '/Users/drw/WPRDC/etl-dev/wprdc-etl') # A path that we need t
 import pipeline as pl
 
 def write_to_csv(filename,list_of_dicts,keys):
-    with open(filename, 'wb') as output_file:
+    with open(filename, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, keys, extrasaction='ignore', lineterminator='\n')
         dict_writer.writeheader()
         dict_writer.writerows(list_of_dicts)
