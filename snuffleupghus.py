@@ -34,6 +34,9 @@ class EventsSchema(pl.BaseSchema):
         ordered = True
 
 def write_to_csv(filename,list_of_dicts,keys):
+    keys[-1] = keys[-1][:-1] # Possibly the biggest kluge ever to deal with the fact that
+    # for some reason, the last key always gets a carriage return within it, regardless
+    # of which field is the last.
     with open(filename, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, keys, extrasaction='ignore', lineterminator='\n')
         dict_writer.writeheader()
