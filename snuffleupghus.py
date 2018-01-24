@@ -19,6 +19,7 @@ class EventsSchema(pl.BaseSchema):
     organization = fields.String(allow_none=True)
     category = fields.String(allow_none=True)
     recommended_for = fields.String(allow_none=True)
+    requirements = fields.String(allow_none=True)
     event_phone = fields.String(allow_none=True)
     event_narrative = fields.String(allow_none=True)
     schedule = fields.String(allow_none=True)
@@ -77,8 +78,10 @@ def parse_file(filepath,basename):
                             "Program Neighborhood": "neighborhood",
                             "Program Address": "address",
                             "Program Lat and Long": "lat_and_lon",
-
+                            "Organization Name": "organization",
+                            "(Event) Requirements": "requirements",
                             "(Event) Recommended For :": "recommended_for"}
+
     # Use local file
     f = open(filepath,'r', newline='')
     # "If newline='' is not specified, newlines embedded inside quoted fields will not be interpreted correctly,..."
@@ -248,8 +251,9 @@ def main(**kwargs):
             'program_or_facility': e['program_or_facility'],
             'neighborhood': e['neighborhood'],
             'address': e['address'],
-            'organization': e['Organization Name'],
+            'organization': e['organization'],
             'recommended_for': e['recommended_for'],
+            'requirements': e['requirements'],
             'event_phone': e['Event Phone'],
             'event_narrative': e['Event Narrative'],
             'schedule': e['Schedule'],
