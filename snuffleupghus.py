@@ -34,9 +34,6 @@ class EventsSchema(pl.BaseSchema):
         ordered = True
 
 def write_to_csv(filename,list_of_dicts,keys):
-    keys[-1] = keys[-1][:-1] # Possibly the biggest kluge ever to deal with the fact that
-    # for some reason, the last key always gets a carriage return within it, regardless
-    # of which field is the last.
     with open(filename, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, keys, extrasaction='ignore', lineterminator='\n')
         dict_writer.writeheader()
@@ -75,21 +72,43 @@ def find_resource_id(site,package_id,resource_name,API_key=None):
     return None
 
 def parse_file(filepath,basename):
+    replacement_headers = {"Recurring, One-Time or One-on-One?": "recurrence",
+                            "Program (Facility) Name": "program_or_facility",
+                            "Program Neighborhood": "neighborhood",
+                            "Program Address": "address",
+                            "Program Lat and Long": "lat_and_lon",
+
+                            "(Event) Recommended For :": "recommended_for"}
     # Use local file
-    f = open(filepath,'r')
+    f = open(filepath,'r', newline='')
+    # "If newline='' is not specified, newlines embedded inside quoted fields will not be interpreted correctly,..."
+    #   - the official Python documentation
+    # This unfortunately didn't have the desired effect as there's still a lingering newline in 
+    # the last field read.
     f.readline() #f.next() # Skip the first line, since it gives the delimiter.
     reader = csv.DictReader(f, delimiter='|', quotechar='"') 
     list_of_dicts = list(reader) 
     f.close()
     f = open(filepath,'r')
     _ = f.readline()
-    headers = f.readline().split('|')
+    headers = f.readline()[:-1].split('|')
+
+    new_headers = []
+    for header in headers:
+        if header in replacement_headers.keys():
+            old_header = header
+            header = replacement_headers[header]
+            for x in list_of_dicts:
+                x[header] = x[old_header]
+                del x[old_header]
+        new_headers.append(header)
+    print("new_headers = {}".format(new_headers))
     dpath = '/'.join(filepath.split("/")[:-1]) + '/'
     if dpath == '/':
         dpath = ''
     outputfilepath = "{}tmp/{}.csv".format(dpath,basename)
     # [ ] If the temp directory doesn't exist, create it. 
-    write_to_csv(outputfilepath,list_of_dicts,headers)
+    write_to_csv(outputfilepath,list_of_dicts,new_headers)
     return list_of_dicts, headers, outputfilepath
 
 def get_lat_and_lon(e,d):
@@ -222,14 +241,15 @@ def main(**kwargs):
 
     events = [] 
     # Reformat their field names.
+    print("events_shelf[0].keys() = {}".format(events_shelf[0].keys()))
     for e in events_shelf:
         d = {'event_name': e['Event Name'],
-            'recurrence': e["Recurring, One-Time or One-on-One?"],
-            'program_or_facility': e['Program (Facility) Name'],
-            'neighborhood': e['Program Neighborhood'],
-            'address': e['Program Address'],
+            'recurrence': e['recurrence'],
+            'program_or_facility': e['program_or_facility'],
+            'neighborhood': e['neighborhood'],
+            'address': e['address'],
             'organization': e['Organization Name'],
-            'recommended_for': e['(Event) Recommended For :'],
+            'recommended_for': e['recommended_for'],
             'event_phone': e['Event Phone'],
             'event_narrative': e['Event Narrative'],
             'schedule': e['Schedule'],
