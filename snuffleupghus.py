@@ -34,6 +34,16 @@ class EventsSchema(pl.BaseSchema):
     class Meta:
         ordered = True
 
+    @pre_load
+    def get_lat_and_lon(self, data):
+    # Split geocoordinates field ("Program Lat and Long") into new latitude and longitude fields.
+        latpart, lonpart = data['lat_and_lon'].split(',')
+        _, latitude = latpart.split(': ')
+        _, longitude = lonpart.split(': ')
+        data['latitude'] = float(latitude)
+        data['longitude'] = float(longitude)
+        del data['lat_and_lon']
+
 def write_to_csv(filename,list_of_dicts,keys):
     with open(filename, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, keys, extrasaction='ignore', lineterminator='\n')
@@ -113,16 +123,6 @@ def parse_file(filepath,basename):
     # [ ] If the temp directory doesn't exist, create it. 
     write_to_csv(outputfilepath,list_of_dicts,new_headers)
     return list_of_dicts, headers, outputfilepath
-
-def get_lat_and_lon(e,d):
-    # Split geocoordinates field ("Program Lat and Long") into new latitude and longitude fields
-    # 
-    latpart, lonpart = e['Program Lat and Long'].split(',')
-    _, latitude = latpart.split(': ')
-    _, longitude = lonpart.split(': ')
-    d['longitude'] = longitude
-    d['latitude'] = latitude
-    return d
 
 def fuse_cats(e,d):
     # Combine Category One and Category Two into a |-delimited category field
@@ -259,7 +259,6 @@ def main(**kwargs):
             'schedule': e['Schedule'],
             'holiday_exception': e['Holiday Exception']
             }
-        d = get_lat_and_lon(e,d)
         d = fuse_cats(e,d)
 
         events.append(d)
