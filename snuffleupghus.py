@@ -254,29 +254,6 @@ def main(**kwargs):
     #"http://bigburgh.com/csvdownload/safePlaces.csv"
     #"http://bigburgh.com/csvdownload/services.csv"
 
-    events = [] 
-    # Reformat their field names.
-    print("events_shelf[0].keys() = {}".format(events_shelf[0].keys()))
-    for e in events_shelf:
-        d = {'event_name': e['Event Name'],
-            'recurrence': e['recurrence'],
-            'program_or_facility': e['program_or_facility'],
-            'neighborhood': e['neighborhood'],
-            'address': e['address'],
-            'organization': e['organization'],
-            'recommended_for': e['recommended_for'],
-            'requirements': e['requirements'],
-            'event_phone': e['Event Phone'],
-            'event_narrative': e['Event Narrative'],
-            'schedule': e['Schedule'],
-            'holiday_exception': e['Holiday Exception']
-            }
-        d = fuse_cats(e,d)
-
-        events.append(d)
-    #events_fields = ['event_name','recurrence','program_or_facility','neighborhood','address','latitude','longitude','organization','category','recommended_for','event_phone','event_narrative','schedule','holiday_exception']
-    # Then bring in the schema and ETL framework.
-    pprint(events[0])
     schema = EventsSchema
     events_fields = schema().serialize_to_ckan_fields() 
     resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
