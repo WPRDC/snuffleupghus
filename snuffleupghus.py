@@ -44,6 +44,33 @@ class EventsSchema(pl.BaseSchema):
         data['longitude'] = float(longitude)
         del data['lat_and_lon']
 
+    @pre_load
+    def fuse_cats(self,data):
+        # Combine Category One and Category Two into a |-delimited category field
+        if 'category_one' not in data and 'category_two' not in data:
+            return None
+        elif 'category_two' not in data:
+            return data['category_one']
+        elif 'category_one' not in data:
+            return data['category_two']
+
+        cat1 = data['category_one']
+        cat2 = data['category_two'] # Empty fields are empty strings (since we're loading a CSV file).
+        if cat2 is None or len(cat2) == 0:
+            if cat1 is None or len(cat1) == 0:
+                data['category'] = None
+            else:
+                data['category'] = cat1
+        elif cat1 is None or len(cat1) == 0:
+            data['category'] = cat2
+        else:
+            data['category'] = "{}|{}".format(cat1,cat2)
+
+        del data['category_one']
+        del data['category_two']
+
+
+
 def write_to_csv(filename,list_of_dicts,keys):
     with open(filename, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, keys, extrasaction='ignore', lineterminator='\n')
@@ -123,21 +150,6 @@ def parse_file(filepath,basename):
     # [ ] If the temp directory doesn't exist, create it. 
     write_to_csv(outputfilepath,list_of_dicts,new_headers)
     return list_of_dicts, headers, outputfilepath
-
-def fuse_cats(e,d):
-    # Combine Category One and Category Two into a |-delimited category field
-    cat1 = e['Category One']
-    cat2 = e['Category Two'] # Empty fields are empty strings (since we're loading a CSV file).
-    if len(cat2) == 0:
-        if len(cat1) == 0:
-            d['category'] = None
-        else:
-            d['category'] = cat1
-    elif len(cat1) == 0:
-        d['category'] = cat2
-    else:
-        d['category'] = "{}|{}".format(cat1,cat2)
-    return d
 
 def transmit(**kwargs):
     target = kwargs.pop('target') # raise ValueError('Target file must be specified.')
