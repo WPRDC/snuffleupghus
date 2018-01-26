@@ -17,11 +17,11 @@ class EventsSchema(pl.BaseSchema):
     event_name = fields.String(allow_none=False)
     recurrence = fields.String(allow_none=True)
     program_or_facility = fields.String(allow_none=True)
-    neighborhood = fields.String(allow_none=True)
-    address = fields.String(allow_none=True)
+    program_neighborhood = fields.String(dump_to='neighborhood',allow_none=True)
+    program_address = fields.String(dump_to='address',allow_none=True)
     latitude = fields.Float(allow_none=True)
     longitude = fields.Float(allow_none=True)
-    organization = fields.String(allow_none=True)
+    organization_name = fields.String(dump_to="organization",allow_none=True)
     category = fields.String(allow_none=True)
     recommended_for = fields.String(allow_none=True)
     requirements = fields.String(allow_none=True)
@@ -42,16 +42,17 @@ class EventsSchema(pl.BaseSchema):
     @pre_load
     def get_lat_and_lon(self, data):
     # Split geocoordinates field ("Program Lat and Long") into new latitude and longitude fields.
-        if 'lat_and_lon' not in data or data['lat_and_lon'] is None:
+        if 'program_lat_and_long' not in data or data['program_lat_and_long'] is None:
             data['latitude'] = None
             data['longitude'] = None
         else:
-            latpart, lonpart = data['lat_and_lon'].split(',')
+            latpart, lonpart = data['program_lat_and_long'].split(',')
             _, latitude = latpart.split(': ')
             _, longitude = lonpart.split(': ')
             data['latitude'] = float(latitude)
             data['longitude'] = float(longitude)
-        del data['lat_and_lon']
+        if 'program_lat_and_long' in data:
+            del data['program_lat_and_long']
 
     @pre_load
     def fuse_cats(self,data):
@@ -121,10 +122,7 @@ def find_resource_id(site,package_id,resource_name,API_key=None):
 def parse_file(filepath,basename):
     replacement_headers = {"Recurring, One-Time or One-on-One?": "recurrence",
                             "Program (Facility) Name": "program_or_facility",
-                            "Program Neighborhood": "neighborhood",
-                            "Program Address": "address",
-                            "Program Lat and Long": "lat_and_lon",
-                            "Organization Name": "organization",
+                            "(Event) Recommended For :": "recommended_for",
                             "(Event) Requirements": "requirements",
                             "(Event) Recommended For :": "recommended_for"}
 
