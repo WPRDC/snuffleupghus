@@ -42,11 +42,15 @@ class EventsSchema(pl.BaseSchema):
     @pre_load
     def get_lat_and_lon(self, data):
     # Split geocoordinates field ("Program Lat and Long") into new latitude and longitude fields.
-        latpart, lonpart = data['lat_and_lon'].split(',')
-        _, latitude = latpart.split(': ')
-        _, longitude = lonpart.split(': ')
-        data['latitude'] = float(latitude)
-        data['longitude'] = float(longitude)
+        if 'lat_and_lon' not in data or data['lat_and_lon'] is None:
+            data['latitude'] = None
+            data['longitude'] = None
+        else:
+            latpart, lonpart = data['lat_and_lon'].split(',')
+            _, latitude = latpart.split(': ')
+            _, longitude = lonpart.split(': ')
+            data['latitude'] = float(latitude)
+            data['longitude'] = float(longitude)
         del data['lat_and_lon']
 
     @pre_load
