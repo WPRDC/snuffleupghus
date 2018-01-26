@@ -3,11 +3,16 @@ from marshmallow import fields, pre_load, post_load
 
 from pprint import pprint
 
+# Note that the wprdc-etl documentation claims that it can handle |-delimited files,
+# if the pipeline is properly configured.
 sys.path.insert(0, '/Users/drw/WPRDC/etl-dev/wprdc-etl') # A path that we need to import code from
 import pipeline as pl
 
 from parameters.local_parameters import SETTINGS_FILE, DATA_PATH
 
+
+# These three schema could certainly be refactored, but it's not clear
+# if it's worth doing.
 class EventsSchema(pl.BaseSchema): 
     event_name = fields.String(allow_none=False)
     recurrence = fields.String(allow_none=True)
