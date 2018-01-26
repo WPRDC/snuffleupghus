@@ -80,6 +80,113 @@ class EventsSchema(pl.BaseSchema):
         del data['category_two']
 
 
+class SafePlacesSchema(pl.BaseSchema): 
+    safe_place_name = fields.String(allow_none=False)
+    program_or_facility = fields.String(allow_none=True)
+    program_neighborhood = fields.String(dump_to='neighborhood',allow_none=True)
+    program_address = fields.String(dump_to='address',allow_none=True)
+    latitude = fields.Float(allow_none=True)
+    longitude = fields.Float(allow_none=True)
+    organization_name = fields.String(dump_to="organization",allow_none=True)
+    recommended_for = fields.String(allow_none=True)
+    requirements = fields.String(allow_none=True)
+    safe_place_phone = fields.String(dump_to="phone",allow_none=True)
+    safe_place_narrative = fields.String(dump_to="narrative",allow_none=True)
+    schedule = fields.String(allow_none=True)
+    # Never let any of the key fields have None values. It's just asking for
+    # multiplicity problems on upsert.
+
+    # [Note that since this script is taking data from CSV files, there should be no
+    # columns with None values. It should all be instances like [value], [value],, [value],...
+    # where the missing value starts as as a zero-length string, which this script
+    # is then responsible for converting into something more apropriate.
+    class Meta:
+        ordered = True
+
+    @pre_load
+    def get_lat_and_lon(self, data):
+    # Split geocoordinates field ("Program Lat and Long") into new latitude and longitude fields.
+        if 'program_lat_and_long' not in data or data['program_lat_and_long'] is None:
+            data['latitude'] = None
+            data['longitude'] = None
+        else:
+            latpart, lonpart = data['program_lat_and_long'].split(',')
+            _, latitude = latpart.split(': ')
+            _, longitude = lonpart.split(': ')
+            data['latitude'] = float(latitude)
+            data['longitude'] = float(longitude)
+        if 'program_lat_and_long' in data:
+            del data['program_lat_and_long']
+
+class ServicesSchema(pl.BaseSchema): 
+    service_name = fields.String(allow_none=False)
+    program_or_facility = fields.String(allow_none=True)
+    program_neighborhood = fields.String(dump_to='neighborhood',allow_none=True)
+    program_address = fields.String(dump_to='address',allow_none=True)
+    latitude = fields.Float(allow_none=True)
+    longitude = fields.Float(allow_none=True)
+    organization_name = fields.String(dump_to="organization",allow_none=True)
+    category = fields.String(allow_none=True)
+    recommended_for = fields.String(allow_none=True)
+    requirements = fields.String(allow_none=True)
+    service_phone = fields.String(dump_to="phone",allow_none=True)
+    service_narrative = fields.String(dump_to="narrative",allow_none=True)
+    schedule = fields.String(allow_none=True)
+    holiday_exception = fields.String(allow_none=True)
+    # Never let any of the key fields have None values. It's just asking for
+    # multiplicity problems on upsert.
+
+    # [Note that since this script is taking data from CSV files, there should be no
+    # columns with None values. It should all be instances like [value], [value],, [value],...
+    # where the missing value starts as as a zero-length string, which this script
+    # is then responsible for converting into something more apropriate.
+    class Meta:
+        ordered = True
+
+    @pre_load
+    def get_lat_and_lon(self, data):
+    # Split geocoordinates field ("Program Lat and Long") into new latitude and longitude fields.
+        if 'program_lat_and_long' not in data or data['program_lat_and_long'] is None:
+            data['latitude'] = None
+            data['longitude'] = None
+        else:
+            try:
+                latpart, lonpart = data['program_lat_and_long'].split(',')
+            except:
+                print(data['program_lat_and_long'])
+                latpart, lonpart = data['program_lat_and_long'].split(',,') # Klugy workaround to deal with
+                # one case of latitude and longitude being separated by two commas.
+            _, latitude = latpart.split(': ')
+            _, longitude = lonpart.split(': ')
+            data['latitude'] = float(latitude)
+            data['longitude'] = float(longitude)
+        if 'program_lat_and_long' in data:
+            del data['program_lat_and_long']
+
+    @pre_load
+    def fuse_cats(self,data):
+        # Combine Category One and Category Two into a |-delimited category field
+        if 'category_one' not in data and 'category_two' not in data:
+            return None
+        elif 'category_two' not in data:
+            return data['category_one']
+        elif 'category_one' not in data:
+            return data['category_two']
+
+        cat1 = data['category_one']
+        cat2 = data['category_two'] # Empty fields are empty strings (since we're loading a CSV file).
+        if cat2 is None or len(cat2) == 0:
+            if cat1 is None or len(cat1) == 0:
+                data['category'] = None
+            else:
+                data['category'] = cat1
+        elif cat1 is None or len(cat1) == 0:
+            data['category'] = cat2
+        else:
+            data['category'] = "{}|{}".format(cat1,cat2)
+
+        del data['category_one']
+        del data['category_two']
 
 def write_to_csv(filename,list_of_dicts,keys):
     with open(filename, 'w') as output_file:
@@ -124,7 +231,11 @@ def parse_file(filepath,basename):
                             "Program (Facility) Name": "program_or_facility",
                             "(Event) Recommended For :": "recommended_for",
                             "(Event) Requirements": "requirements",
-                            "(Event) Recommended For :": "recommended_for"}
+                            "(Safe Place) Recommended For :": "recommended_for",
+                            "(Safe Place) Requirements": "requirements",
+                            "(Service) Recommended For :": "recommended_for",
+                            "(Service) Requirements": "requirements"
+                            }
 
     # Use local file
     f = open(filepath,'r', newline='')
