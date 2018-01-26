@@ -355,31 +355,44 @@ def transmit(**kwargs):
         print("Something went wrong.")
         return None
 
-def main(**kwargs):
-
-    # Down here in the main function, fetch all three CSV files with requests.
+def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name):
+    # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
     # Then process them according to their needs.
 
-    if len(sys.argv) in [0,1,2,3,4]:
+    if not fetch_files and len(sys.argv) > n:
         # Interpret command-line arguments as local filenames to use.
-        events_shelf, events_headers, events_file_path = parse_file(sys.argv[1],'events') # Where a shelf is a list of dictionaries
-
+        events_shelf, events_headers, events_file_path = parse_file(sys.argv[n],table) # Where a shelf is a list of dictionaries
     else:
-        r = requests.get("http://bigburgh.com/csvdownload/events.csv")
-        events_shelf = r.json()
+        r = requests.get("http://bigburgh.com/csvdownload/{}.csv".format(table))
+        dpath = '/'.join(DATA_PATH.split("/")[:-1]) + '/'
+        if dpath == '/':
+            dpath = ''
+        basename = "pipeorama"
+        pipe_delimited_file_path = "{}tmp/{}-with-pipes.csv".format(dpath,table) # [ ] Eventually delete these files.
+        with open(pipe_delimited_file_path,'wb') as f:
+            f.write(r.content)
+        events_shelf, events_headers, events_file_path = parse_file(pipe_delimited_file_path,table) # Where a shelf is a list of dictionaries
 
-    #"http://bigburgh.com/csvdownload/safePlaces.csv"
-    #"http://bigburgh.com/csvdownload/services.csv"
+    #print("events_file_path = {}".format(events_file_path)) This is in tmp/tmp/
 
-    schema = EventsSchema
+    schema = schema_dict[table]
     events_fields = schema().serialize_to_ckan_fields() 
     resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
-        fields_to_publish = events_fields, key_fields = ['event_name'],
-        pipe_name = 'BigBurghEvents', resource_name = 'Events from BigBurgh')
-        
+        fields_to_publish = events_fields, key_fields = key_fields,
+        pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name)
+
+schema_dict = {'events': EventsSchema,
+                'safePlaces': SafePlacesSchema,
+                'services': ServicesSchema}
+
+def main(**kwargs):
+    fetch_files = False
+    get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = 'List of Events from BigBurgh')
+    #"http://bigburgh.com/csvdownload/safePlaces.csv"
+    get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = 'List of Safe Places from BigBurgh')
+    #"http://bigburgh.com/csvdownload/services.csv"
+    get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = 'List of Services from BigBurgh')
 
 if __name__ == '__main__':
-    print(len(sys.argv))
-    if len(sys.argv) == 2:
-        main() # Make this the default.
+    main() # Make this the default.
