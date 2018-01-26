@@ -170,7 +170,7 @@ def transmit(**kwargs):
     if 'fields_to_publish' not in kwargs:
         raise ValueError('The fields to be published have not been specified.')
     fields_to_publish = kwargs.pop('fields_to_publish')
-    server = kwargs.pop('server', 'your-new-favorite-dataset') #'production')
+    server = kwargs.pop('server', 'secret-cool-data') #'production')
     pipe_name = kwargs.pop('pipe_name', 'generic_pipeline_name')
     clear_first = kwargs.pop('clear_first', False) # If this parameter is true,
     # the datastore will be deleted (leaving the resource intact).
