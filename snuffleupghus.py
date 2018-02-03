@@ -9,7 +9,7 @@ sys.path.insert(0, '/Users/drw/WPRDC/etl-dev/wprdc-etl') # A path that we need t
 import pipeline as pl
 
 from parameters.local_parameters import SETTINGS_FILE, DATA_PATH
-
+from notify import send_to_slack
 
 # These three schema could certainly be refactored, but it's not clear
 # if it's worth doing.
@@ -387,12 +387,21 @@ schema_dict = {'events': EventsSchema,
                 'services': ServicesSchema}
 
 def main(**kwargs):
-    fetch_files = False
-    get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = 'List of Events from BigBurgh')
-    #"http://bigburgh.com/csvdownload/safePlaces.csv"
-    get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = 'List of Safe Places from BigBurgh')
-    #"http://bigburgh.com/csvdownload/services.csv"
-    get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = 'List of Services from BigBurgh')
+    try:
+        fetch_files = kwargs.get('fetch_files',False)
+        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = 'List of Events from BigBurgh')
+        #"http://bigburgh.com/csvdownload/safePlaces.csv"
+        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = 'List of Safe Places from BigBurgh')
+        #"http://bigburgh.com/csvdownload/services.csv"
+        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = 'List of Services from BigBurgh')
+    except:
+        e = sys.exc_info()[0]
+        print("Error: {} : ".format(e))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        print(''.join('!! ' + line for line in lines))  # Log it or whatever here
+        msg = "snuffleupghus.py ran into an error: {}.\nHere's the traceback:\n''.join('!! ' + line for line in lines)".format(e)
+        send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':tophat:')
 
 if __name__ == '__main__':
     main() # Make this the default.
