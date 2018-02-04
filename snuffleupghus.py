@@ -401,7 +401,7 @@ def main(**kwargs):
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         print(''.join('!! ' + line for line in lines))  # Log it or whatever here
         msg = "snuffleupghus.py ran into an error: {}.\nHere's the traceback:\n''.join('!! ' + line for line in lines)".format(e)
-        send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':tophat:')
+        send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':glitch_crab:')
 
 if __name__ == '__main__':
     main() # Make this the default.
