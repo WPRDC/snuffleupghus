@@ -391,11 +391,11 @@ def main(**kwargs):
     server = kwargs.pop('server', 'secret-cool-data') #'production')
     try:
         fetch_files = kwargs.get('fetch_files',False)
-        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = 'List of Events from BigBurgh', server = server)
+        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = "This Month's List of Events", server = server)
         #"http://bigburgh.com/csvdownload/safePlaces.csv"
-        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = 'List of Safe Places from BigBurgh', server = server)
+        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = "This Month's List of Safe Places", server = server)
         #"http://bigburgh.com/csvdownload/services.csv"
-        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = 'List of Services from BigBurgh', server = server)
+        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = "This Month's List of Services", server = server)
     except:
         e = sys.exc_info()[0]
         print("Error: {} : ".format(e))
