@@ -1,6 +1,8 @@
 base.py
 *.pyc
 *.swp
+*.csv
+*.log
 parameters/
 tmp/
 TODO
