@@ -355,7 +355,7 @@ def transmit(**kwargs):
         print("Something went wrong.")
         return None
 
-def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name):
+def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server):
     # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
     # Then process them according to their needs.
@@ -380,20 +380,22 @@ def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name):
     events_fields = schema().serialize_to_ckan_fields() 
     resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
         fields_to_publish = events_fields, key_fields = key_fields,
-        pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name)
+        pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
+        server = server)
 
 schema_dict = {'events': EventsSchema,
                 'safePlaces': SafePlacesSchema,
                 'services': ServicesSchema}
 
 def main(**kwargs):
+    server = kwargs.pop('server', 'secret-cool-data') #'production')
     try:
         fetch_files = kwargs.get('fetch_files',False)
-        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = 'List of Events from BigBurgh')
+        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = 'List of Events from BigBurgh', server = server)
         #"http://bigburgh.com/csvdownload/safePlaces.csv"
-        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = 'List of Safe Places from BigBurgh')
+        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = 'List of Safe Places from BigBurgh', server = server)
         #"http://bigburgh.com/csvdownload/services.csv"
-        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = 'List of Services from BigBurgh')
+        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = 'List of Services from BigBurgh', server = server)
     except:
         e = sys.exc_info()[0]
         print("Error: {} : ".format(e))
@@ -404,4 +406,8 @@ def main(**kwargs):
         send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':glitch_crab:')
 
 if __name__ == '__main__':
-    main() # Make this the default.
+    print(sys.argv)
+    if len(sys.argv) > 1:
+        main(fetch_files=True,server=sys.argv[1])
+    else:
+        main()
