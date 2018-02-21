@@ -1,4 +1,4 @@
-import sys, re, csv, json, time, ckanapi, requests
+import sys, re, csv, json, time, ckanapi, requests, traceback
 from marshmallow import fields, pre_load, post_load
 
 from pprint import pprint
