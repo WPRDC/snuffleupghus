@@ -210,7 +210,7 @@ def open_a_channel(settings_file_path,server):
     package_id = settings['loader'][server]['package_id']
     API_key = settings['loader'][server]['ckan_api_key']
 
-    return site, API_key, settings
+    return site, API_key, package_id
 
 def get_package_parameter(site,package_id,parameter,API_key=None):
     # Some package parameters you can fetch from the WPRDC with
@@ -308,7 +308,7 @@ def transmit(**kwargs):
     # There's two versions of kwargs running around now: One for passing to transmit, and one for passing to the pipeline.
     # Be sure to pop all transmit-only arguments off of kwargs to prevent them being passed as pipepline parameters.
 
-    site, API_key, settings = open_a_channel(SETTINGS_FILE,server)
+    site, API_key, package_id = open_a_channel(SETTINGS_FILE,server)
 
     if 'resource_name' in kwargs:
         resource_specifier = kwargs['resource_name']
