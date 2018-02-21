@@ -188,11 +188,29 @@ class ServicesSchema(pl.BaseSchema):
         del data['category_one']
         del data['category_two']
 
+class ServicesArchiveSchema(ServicesSchema):
+    year_month = fields.String(allow_none=False)
+
+    @pre_load
+    def add_year_month(self, data):
+        data['year_month'] = datetime.strftime(datetime.now(),"%Y%m")
+
 def write_to_csv(filename,list_of_dicts,keys):
     with open(filename, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, keys, extrasaction='ignore', lineterminator='\n')
         dict_writer.writeheader()
         dict_writer.writerows(list_of_dicts)
+
+def open_a_channel(settings_file_path,server):
+    # Get parameters to communicate with a CKAN instance
+    # from the specified JSON file.
+    with open(settings_file_path) as f:
+        settings = json.load(f)
+    site = settings['loader'][server]['ckan_root_url']
+    package_id = settings['loader'][server]['package_id']
+    API_key = settings['loader'][server]['ckan_api_key']
+
+    return site, API_key, settings
 
 def get_package_parameter(site,package_id,parameter,API_key=None):
     # Some package parameters you can fetch from the WPRDC with
@@ -290,13 +308,7 @@ def transmit(**kwargs):
     # There's two versions of kwargs running around now: One for passing to transmit, and one for passing to the pipeline.
     # Be sure to pop all transmit-only arguments off of kwargs to prevent them being passed as pipepline parameters.
 
-    # Code below stolen from prime_ckan/*/open_a_channel() but really from utility_belt/gadgets
-    #with open(os.path.dirname(os.path.abspath(__file__))+'/ckan_settings.json') as f: # The path of this file needs to be specified.
-    with open(SETTINGS_FILE) as f:
-        settings = json.load(f)
-    site = settings['loader'][server]['ckan_root_url']
-    package_id = settings['loader'][server]['package_id']
-    API_key = settings['loader'][server]['ckan_api_key']
+    site, API_key, settings = open_a_channel(SETTINGS_FILE,server)
 
     if 'resource_name' in kwargs:
         resource_specifier = kwargs['resource_name']
