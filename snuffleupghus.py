@@ -359,11 +359,10 @@ def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server)
     # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
     # Then process them according to their needs.
-
-    if not fetch_files and len(sys.argv) > n:
+    if not fetch_files and len(sys.argv) > n+2:
         # Interpret command-line arguments as local filenames to use.
         events_shelf, events_headers, events_file_path = parse_file(sys.argv[n],table) # Where a shelf is a list of dictionaries
-    else:
+    elif fetch_files:
         r = requests.get("http://bigburgh.com/csvdownload/{}.csv".format(table))
         dpath = '/'.join(DATA_PATH.split("/")[:-1]) + '/'
         if dpath == '/':
@@ -375,6 +374,9 @@ def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server)
         events_shelf, events_headers, events_file_path = parse_file(pipe_delimited_file_path,table) # Where a shelf is a list of dictionaries
 
     #print("events_file_path = {}".format(events_file_path)) This is in tmp/tmp/
+    else: # fetch_files is false but the nth file location was not given
+        print("The location of file {} was not specified.".format(n))
+        return
 
     schema = schema_dict[table]
     events_fields = schema().serialize_to_ckan_fields() 
@@ -403,11 +405,18 @@ def main(**kwargs):
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         print(''.join('!! ' + line for line in lines))  # Log it or whatever here
         msg = "snuffleupghus.py ran into an error: {}.\nHere's the traceback:\n''.join('!! ' + line for line in lines)".format(e)
-        send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':glitch_crab:')
+
+
+
+
+
+
+        #send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':glitch_crab:')
 
 if __name__ == '__main__':
     print(sys.argv)
-    if len(sys.argv) > 1:
-        main(fetch_files=True,server=sys.argv[1])
+    if len(sys.argv) in [1,2]:
+        print("At a minimum, the fetch_files and server parameters must be specified as the first two command-line parameters.")
     else:
-        main()
+        fetch_files = (sys.argv[1].lower() == 'true')
+        main(fetch_files=fetch_files,server=sys.argv[2])
