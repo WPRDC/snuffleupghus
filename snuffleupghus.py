@@ -1,6 +1,7 @@
 import sys, re, csv, json, time, ckanapi, requests, traceback
 from marshmallow import fields, pre_load, post_load
 
+from datetime import datetime
 from pprint import pprint
 
 # Note that the wprdc-etl documentation claims that it can handle |-delimited files,
@@ -11,7 +12,7 @@ import pipeline as pl
 from parameters.local_parameters import SETTINGS_FILE, DATA_PATH
 from notify import send_to_slack
 
-# These three schema could certainly be refactored, but it's not clear
+# The three base schema could certainly be refactored, but it's not clear
 # if it's worth doing.
 class EventsSchema(pl.BaseSchema): 
     event_name = fields.String(allow_none=False)
@@ -79,6 +80,12 @@ class EventsSchema(pl.BaseSchema):
         del data['category_one']
         del data['category_two']
 
+class EventsArchiveSchema(EventsSchema):
+    year_month = fields.String(allow_none=False)
+
+    @pre_load
+    def add_year_month(self, data):
+        data['year_month'] = datetime.strftime(datetime.now(),"%Y%m")
 
 class SafePlacesSchema(pl.BaseSchema): 
     safe_place_name = fields.String(allow_none=False)
@@ -117,6 +124,13 @@ class SafePlacesSchema(pl.BaseSchema):
             data['longitude'] = float(longitude)
         if 'program_lat_and_long' in data:
             del data['program_lat_and_long']
+
+class SafePlacesArchiveSchema(SafePlacesSchema):
+    year_month = fields.String(allow_none=False)
+
+    @pre_load
+    def add_year_month(self, data):
+        data['year_month'] = datetime.strftime(datetime.now(),"%Y%m")
 
 class ServicesSchema(pl.BaseSchema): 
     service_name = fields.String(allow_none=False)
