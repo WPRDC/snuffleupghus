@@ -415,8 +415,9 @@ def main(**kwargs):
         print("Error: {} : ".format(e))
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        print(''.join('!! ' + line for line in lines))  # Log it or whatever here
-        msg = "snuffleupghus.py ran into an error: {}.\nHere's the traceback:\n''.join('!! ' + line for line in lines)".format(e)
+        traceback_msg = ''.join('!! ' + line for line in lines)
+        print(traceback_msg)  # Log it or whatever here
+        msg = "snuffleupghus.py ran into an error: {}.\nHere's the traceback:\n{}".format(e,traceback_msg)
         send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':snuffleupagus:')
 
 if __name__ == '__main__':
