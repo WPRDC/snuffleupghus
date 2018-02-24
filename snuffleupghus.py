@@ -258,6 +258,35 @@ def find_resource_id(site,package_id,resource_name,API_key=None):
             return r['id']
     return None
 
+def query_resource(site,query,API_key=None):
+    # Use the datastore_search_sql API endpoint to query a CKAN resource.
+    ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
+    response = ckan.action.datastore_search_sql(sql=query)
+    # A typical response is a dictionary like this
+    #{u'fields': [{u'id': u'_id', u'type': u'int4'},
+    #             {u'id': u'_full_text', u'type': u'tsvector'},
+    #             {u'id': u'pin', u'type': u'text'},
+    #             {u'id': u'number', u'type': u'int4'},
+    #             {u'id': u'total_amount', u'type': u'float8'}],
+    # u'records': [{u'_full_text': u"'0001b00010000000':1 '11':2 '13585.47':3",
+    #               u'_id': 1,
+    #               u'number': 11,
+    #               u'pin': u'0001B00010000000',
+    #               u'total_amount': 13585.47},
+    #              {u'_full_text': u"'0001c00058000000':3 '2':2 '7827.64':1",
+    #               u'_id': 2,
+    #               u'number': 2,
+    #               u'pin': u'0001C00058000000',
+    #               u'total_amount': 7827.64},
+    #              {u'_full_text': u"'0001c01661006700':3 '1':1 '3233.59':2",
+    #               u'_id': 3,
+    #               u'number': 1,
+    #               u'pin': u'0001C01661006700',
+    #               u'total_amount': 3233.59}]
+    # u'sql': u'SELECT * FROM "d1e80180-5b2e-4dab-8ec3-be621628649e" LIMIT 3'}
+    data = response['records']
+    return data
+    
 def parse_file(filepath,basename):
     replacement_headers = {"Recurring, One-Time or One-on-One?": "recurrence",
                             "Program (Facility) Name": "program_or_facility",
