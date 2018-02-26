@@ -436,13 +436,13 @@ def transmit(**kwargs):
         print("Something went wrong.")
         return None
 
-def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server):
+def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server,archive_resource_name,add_to_archive=False):
     # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
     # Then process them according to their needs.
     if not fetch_files and len(sys.argv) > n+2:
-        # Interpret command-line arguments as local filenames to use.
-        events_shelf, events_headers, events_file_path = parse_file(sys.argv[n],table) # Where a shelf is a list of dictionaries
+        # Interpret command-line arguments (after fetch_files and server) as local filenames to use.
+        events_shelf, events_headers, events_file_path = parse_file(sys.argv[n+2],table) # Where a shelf is a list of dictionaries
     elif fetch_files:
         r = requests.get("http://bigburgh.com/csvdownload/{}.csv".format(table))
         dpath = '/'.join(DATA_PATH.split("/")[:-1]) + '/'
@@ -460,25 +460,86 @@ def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server)
         return
 
     schema = schema_dict[table]
-    events_fields = schema().serialize_to_ckan_fields() 
-    resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
+    events_fields = schema().serialize_to_ckan_fields()
+    kwparams = dict(target = events_file_path, update_method = 'upsert', schema = schema, 
         fields_to_publish = events_fields, key_fields = key_fields,
         pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
         server = server)
 
+    #resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
+    #    fields_to_publish = events_fields, key_fields = key_fields,
+    #    pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
+    #    server = server)
+
+    resource_id = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
+    time.sleep(0.5)
+    kwparams['clear_first']=True                  # Then...
+    resource_id = transmit(**kwparams) # Clear the datastore and upload the data again.
+    print("(Yes, this data is being deliberately piped to the CKAN resource twice. It has something to do with using the clear_first parameter to clear the datastore, which can only be done if the datastore has already been created, since the ETL framework is flawed.)")
+
+    if add_to_archive:
+        # Check if there's already enough records in the resource (archive_resource_name)
+        site, API_key, package_id = open_a_channel(SETTINGS_FILE,server)
+        archive_resource_id = find_resource_id(site,package_id,archive_resource_name,API_key)
+        current_year_month = datetime.strftime(datetime.now(),"%Y%m")
+        if archive_resource_id is not None:
+            query = "SELECT * FROM \"{}\" WHERE year_month = \'{}\'".format(archive_resource_id,current_year_month)
+            print(site,query,API_key)
+            loaded_data = query_any_resource(site, query, archive_resource_id, {'year_month': current_year_month}, API_key)
+            # Eventually the API key won't be needed here, once the dataset is public.
+            number_of_records = len(loaded_data)
+            print(number_of_records)
+            # [ ] Check whether any of the loaded_data collides with the new data. (It probably does.)
+
+
+            if number_of_records >= len(events_shelf): # Assume that the data for the month is sufficiently complete:
+                archive = False
+            elif number_of_records == 0: # Definitely insert the new data into the archive.
+                archive = True
+                archive_update_method = 'insert'
+            else:
+                archive = True
+                #archive_update_method = 'upsert'
+                # On second thought, let's always insert these records until we find an issue with this.
+                archive_update_method = 'insert'
+                # But in these instances, let's send a message that this should be investigated:
+                msg = "number_of_records = {}, while len(events_shelf) = {}. Inserting new records into {}, but it would be a good idea to check manually for conflicts and see if this is (in general) a good solution.".format(number_of_records, len(events_shelf), archive_resource_name)
+                send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':snuffleupagus:')
+        else:
+            archive = True
+            archive_update_method = 'insert'
+
+
+        if archive:
+            archive_schema = schema_dict[table+'_archive']
+            events_fields = archive_schema().serialize_to_ckan_fields() 
+            pprint(events_fields)
+            events_fields = [events_fields[-1]] + events_fields[:-1]
+            # Add year_month field to data through the schema.
+            resource_id = transmit(target = events_file_path, update_method = archive_update_method, 
+                schema = archive_schema, fields_to_publish = events_fields, key_fields = key_fields,
+                pipe_name = 'BigBurghArchivePipe{}'.format(n), 
+                resource_name = archive_resource_name, server = server)
+
+
 schema_dict = {'events': EventsSchema,
+                'events_archive': EventsArchiveSchema,
                 'safePlaces': SafePlacesSchema,
-                'services': ServicesSchema}
+                'safePlaces_archive': SafePlacesArchiveSchema,
+                'services': ServicesSchema,
+                'services_archive': ServicesArchiveSchema
+                }
 
 def main(**kwargs):
     server = kwargs.pop('server', 'secret-cool-data') #'production')
     try:
         fetch_files = kwargs.get('fetch_files',False)
-        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = "This Month's List of Events", server = server)
+        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = "Current List of Events", server = server, archive_resource_name = "Events Archive")
         #"http://bigburgh.com/csvdownload/safePlaces.csv"
-        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = "This Month's List of Safe Places", server = server)
+        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = "Current List of Safe Places", server = server, archive_resource_name = "Safe Places Archive", add_to_archive = True)
         #"http://bigburgh.com/csvdownload/services.csv"
-        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = "This Month's List of Services", server = server)
+        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = "Current List of Services", server = server, archive_resource_name = "Services Archive")
+        print("Can we guarantee that the name column can be used as a primary key without collisions?")
     except:
         e = sys.exc_info()[0]
         print("Error: {} : ".format(e))
