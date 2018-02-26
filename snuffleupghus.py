@@ -247,7 +247,7 @@ def get_package_parameter(site,package_id,parameter,API_key=None):
         #print("The parameter {} for this package is {}".format(parameter,metadata[parameter]))
     except:
         raise RuntimeError("Unable to obtain package parameter '{}' for package with ID {}".format(parameter,package_id))
-
+    #
     return desired_string
     
 def find_resource_id(site,package_id,resource_name,API_key=None):
@@ -260,7 +260,12 @@ def find_resource_id(site,package_id,resource_name,API_key=None):
 
 def query_resource(site,query,API_key=None):
     # Use the datastore_search_sql API endpoint to query a CKAN resource.
+
+    # Note that this doesn't work for private datasets. 
+    # The relevant CKAN GitHub issue has been closed.
+    # https://github.com/ckan/ckan/issues/1954
     ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
+
     response = ckan.action.datastore_search_sql(sql=query)
     # A typical response is a dictionary like this
     #{u'fields': [{u'id': u'_id', u'type': u'int4'},
@@ -286,7 +291,28 @@ def query_resource(site,query,API_key=None):
     # u'sql': u'SELECT * FROM "d1e80180-5b2e-4dab-8ec3-be621628649e" LIMIT 3'}
     data = response['records']
     return data
-    
+
+def query_private_resource(site,resource_id,filters,API_key=None):
+    # Private resources can be queried using the datastore_search API 
+    # endpoint, which supports filters.
+    ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
+    response = ckan.action.datastore_search(id=resource_id,filters=filters)
+    data = response['records']
+    return data
+
+def query_any_resource(site,query,resource_id,filters,API_key=None):
+    ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
+    # From resource ID determine package ID.
+    package_id = ckan.action.resource_show(id=resource_id)['package_id']
+    # From package ID determine if the package is private.
+    private = ckan.action.package_show(id=package_id)['private']
+    if private:
+        #print("As of February 2018, CKAN still doesn't allow you to run a datastore_search_sql query on a private dataset. Sorry. See this GitHub issue if you want to know a little more: https://github.com/ckan/ckan/issues/1954")
+        #raise ValueError("CKAN can't query private resources (like {}) yet.".format(resource_id))
+        return query_private_resource(site,resource_id,filters,API_key)
+    else:
+        return query_resource(site,query,API_key)
+
 def parse_file(filepath,basename):
     replacement_headers = {"Recurring, One-Time or One-on-One?": "recurrence",
                             "Program (Facility) Name": "program_or_facility",
