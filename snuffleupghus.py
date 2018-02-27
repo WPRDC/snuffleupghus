@@ -534,12 +534,19 @@ def main(**kwargs):
     server = kwargs.pop('server', 'secret-cool-data') #'production')
     try:
         fetch_files = kwargs.get('fetch_files',False)
-        get_nth_file_and_upsert(fetch_files,1,'events',key_fields = ['event_name'], resource_name = "Current List of Events", server = server, archive_resource_name = "Events Archive")
-        #"http://bigburgh.com/csvdownload/safePlaces.csv"
-        get_nth_file_and_upsert(fetch_files,2,'safePlaces',key_fields = ['safe_place_name'], resource_name = "Current List of Safe Places", server = server, archive_resource_name = "Safe Places Archive", add_to_archive = True)
-        #"http://bigburgh.com/csvdownload/services.csv"
-        get_nth_file_and_upsert(fetch_files,3,'services',key_fields = ['service_name'], resource_name = "Current List of Services", server = server, archive_resource_name = "Services Archive")
-        print("Can we guarantee that the name column can be used as a primary key without collisions?")
+        # No primary key is used since we can't guarantee that there won't be collisions.
+        get_nth_file_and_insert(fetch_files,1,'events',key_fields = [], resource_name = "Current List of Events", server = server, archive_resource_name = "Events Archive", add_to_archive=True)
+        get_nth_file_and_insert(fetch_files,2,'safePlaces',key_fields = [], resource_name = "Current List of Safe Places", server = server, archive_resource_name = "Safe Places Archive", add_to_archive = True)
+        get_nth_file_and_insert(fetch_files,3,'services',key_fields = [], resource_name = "Current List of Services", server = server, archive_resource_name = "Services Archive",add_to_archive=True)
+        # The main scheme for ensuring that no duplicate rows are archived is running the 
+        # script once per month, but it's necessary to make sure that it actually runs successfully!
+        
+        # Well, we got to the end of this block, so it seems like the script executed successfully.
+        # Let's add a metadata tag to the package that indicates the last time the ETL script 
+        # ran successfully:
+
+        # extras metadata dictionary is implemented in CKAN 2.7:
+        # extras['etl_last_successfully_run'] = datetime.now().isoformat()
     except:
         e = sys.exc_info()[0]
         print("Error: {} : ".format(e))
