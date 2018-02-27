@@ -479,31 +479,8 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
 
     if add_to_archive:
         site, API_key, package_id = open_a_channel(SETTINGS_FILE,server)
-        # Create a new archive for just that month (if it doesn't already exist).
-        archive_schema = schema_dict[table+'_archive']
-        events_fields = archive_schema().serialize_to_ckan_fields() 
-        pprint(events_fields)
-        events_fields = [events_fields[-1]] + events_fields[:-1]
-        # Add year_month field to data through the schema.
-        now = datetime.now()
-        year = now.year
-        month = datetime.strftime(now,"%m")
-        month_archive_resource_name = "{}-{} {}".format(year,month,archive_resource_name)
-
-        kwparams = dict(target = events_file_path, update_method = 'insert', schema = archive_schema, 
-            fields_to_publish = events_fields, key_fields = [],
-            pipe_name = 'BigBurghArchivePipe{}'.format(n), 
-            resource_name = month_archive_resource_name, server = server)
-            # Note that inserting records where key_fields = [] allows all records
-            # to be added, whereas if you set the key field to be the name of the
-            # event, a duplicate (or near duplicate) causes an error when insertions
-            # are attempted.
-        _ = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
-        time.sleep(0.5)
-        kwparams['clear_first']=True # Then...
-        resource_id = transmit(**kwparams) # Clear the datastore and upload the data again.
        
-        # Also add to the aggregate archive of all months.
+        # Add to the aggregate archive of all months.
         # Check if there's already enough records in the resource (archive_resource_name)
         archive_resource_id = find_resource_id(site,package_id,archive_resource_name,API_key)
         current_year_month = datetime.strftime(datetime.now(),"%Y%m")
@@ -515,7 +492,6 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
             number_of_records = len(loaded_data)
             print(number_of_records)
             # [ ] Check whether any of the loaded_data collides with the new data. (It probably does.)
-
 
             if number_of_records >= len(events_shelf): # Assume that the data for the month is sufficiently complete:
                 archive = False
@@ -545,7 +521,30 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
                 schema = archive_schema, fields_to_publish = events_fields, key_fields = key_fields,
                 pipe_name = 'BigBurghArchivePipe{}'.format(n), 
                 resource_name = archive_resource_name, server = server)
+        
+        ##############################################################################################
+        # Also, and in any event, reate a new archive for just that month (if it doesn't already exist).
+        archive_schema = schema_dict[table+'_archive']
+        events_fields = archive_schema().serialize_to_ckan_fields() 
+        events_fields = [events_fields[-1]] + events_fields[:-1]
+        # Add year_month field to data through the schema.
+        now = datetime.now()
+        year = now.year
+        month = datetime.strftime(now,"%m")
+        month_archive_resource_name = "{}-{} {}".format(year,month,archive_resource_name)
 
+        kwparams = dict(target = events_file_path, update_method = 'insert', schema = archive_schema, 
+            fields_to_publish = events_fields, key_fields = [],
+            pipe_name = 'BigBurghArchivePipe{}'.format(n), 
+            resource_name = month_archive_resource_name, server = server)
+            # Note that inserting records where key_fields = [] allows all records
+            # to be added, whereas if you set the key field to be the name of the
+            # event, a duplicate (or near duplicate) causes an error when insertions
+            # are attempted.
+        _ = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
+        time.sleep(0.5)
+        kwparams['clear_first']=True # Then...
+        resource_id = transmit(**kwparams) # Clear the datastore and upload the data again.
 
 schema_dict = {'events': EventsSchema,
                 'events_archive': EventsArchiveSchema,
