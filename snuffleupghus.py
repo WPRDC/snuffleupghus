@@ -436,6 +436,14 @@ def transmit(**kwargs):
         print("Something went wrong.")
         return None
 
+def clear_and_upload(kwparams):
+    resource_id = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
+    time.sleep(0.5)
+    kwparams['clear_first']=True                  # Then...
+    resource_id = transmit(**kwparams) # Clear the datastore and upload the data again.
+    print("(Yes, this data is being deliberately piped to the CKAN resource twice. It has something to do with using the clear_first parameter to clear the datastore, which can only be done if the datastore has already been created, since the ETL framework is flawed.)")
+    return resource_id
+
 def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,archive_resource_name,add_to_archive=False):
     # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
@@ -466,16 +474,7 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
         pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
         server = server)
 
-    #resource_id = transmit(target = events_file_path, update_method = 'insert', schema = schema, 
-    #    fields_to_publish = events_fields, key_fields = key_fields,
-    #    pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
-    #    server = server)
-
-    resource_id = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
-    time.sleep(0.5)
-    kwparams['clear_first']=True                  # Then...
-    resource_id = transmit(**kwparams) # Clear the datastore and upload the data again.
-    print("(Yes, this data is being deliberately piped to the CKAN resource twice. It has something to do with using the clear_first parameter to clear the datastore, which can only be done if the datastore has already been created, since the ETL framework is flawed.)")
+    resource_id = clear_and_upload(kwparams)
 
     if add_to_archive:
         site, API_key, package_id = open_a_channel(SETTINGS_FILE,server)
@@ -541,10 +540,7 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
             # to be added, whereas if you set the key field to be the name of the
             # event, a duplicate (or near duplicate) causes an error when insertions
             # are attempted.
-        _ = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
-        time.sleep(0.5)
-        kwparams['clear_first']=True # Then...
-        resource_id = transmit(**kwparams) # Clear the datastore and upload the data again.
+        resource_id = clear_and_upload(kwparams)
 
 schema_dict = {'events': EventsSchema,
                 'events_archive': EventsArchiveSchema,
