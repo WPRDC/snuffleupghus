@@ -483,7 +483,7 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
         archive_resource_id = find_resource_id(site,package_id,archive_resource_name,API_key)
         current_year_month = datetime.strftime(datetime.now(),"%Y%m")
         if archive_resource_id is not None:
-            query = "SELECT * FROM \"{}\" WHERE year_month = \'{}\'".format(archive_resource_id,current_year_month)
+            query = "SELECT * FROM \"{}\" WHERE year_month = \'{}\' LIMIT 999999".format(archive_resource_id,current_year_month)
             print(site,query,API_key)
             loaded_data = query_any_resource(site, query, archive_resource_id, {'year_month': current_year_month}, API_key)
             # Eventually the API key won't be needed here, once the dataset is public.
