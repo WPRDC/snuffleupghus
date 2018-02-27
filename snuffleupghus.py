@@ -358,7 +358,7 @@ def parse_file(filepath,basename):
 
 def transmit(**kwargs):
     target = kwargs.pop('target') # raise ValueError('Target file must be specified.')
-    update_method = kwargs.pop('update_method','upsert')
+    update_method = kwargs.pop('update_method','insert')
     if 'schema' not in kwargs:
         raise ValueError('A schema must be given to pipe the data to CKAN.')
     schema = kwargs.pop('schema')
@@ -436,7 +436,7 @@ def transmit(**kwargs):
         print("Something went wrong.")
         return None
 
-def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server,archive_resource_name,add_to_archive=False):
+def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,archive_resource_name,add_to_archive=False):
     # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
     # Then process them according to their needs.
@@ -461,12 +461,12 @@ def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server,
 
     schema = schema_dict[table]
     events_fields = schema().serialize_to_ckan_fields()
-    kwparams = dict(target = events_file_path, update_method = 'upsert', schema = schema, 
+    kwparams = dict(target = events_file_path, update_method = 'insert', schema = schema, 
         fields_to_publish = events_fields, key_fields = key_fields,
         pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
         server = server)
 
-    #resource_id = transmit(target = events_file_path, update_method = 'upsert', schema = schema, 
+    #resource_id = transmit(target = events_file_path, update_method = 'insert', schema = schema, 
     #    fields_to_publish = events_fields, key_fields = key_fields,
     #    pipe_name = 'BigBurghPipe{}'.format(n), resource_name = resource_name,
     #    server = server)
@@ -499,7 +499,7 @@ def get_nth_file_and_upsert(fetch_files,n,table,key_fields,resource_name,server,
                 archive_update_method = 'insert'
             else:
                 archive = True
-                #archive_update_method = 'upsert'
+                #archive_update_method = 'insert'
                 # On second thought, let's always insert these records until we find an issue with this.
                 archive_update_method = 'insert'
                 # But in these instances, let's send a message that this should be investigated:
