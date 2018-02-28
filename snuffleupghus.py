@@ -347,7 +347,6 @@ def parse_file(filepath,basename):
                 x[header] = x[old_header]
                 del x[old_header]
         new_headers.append(header)
-    print("new_headers = {}".format(new_headers))
     dpath = '/'.join(filepath.split("/")[:-1]) + '/'
     if dpath == '/':
         dpath = ''
@@ -381,20 +380,10 @@ def transmit(**kwargs):
 
     if 'resource_name' in kwargs:
         resource_specifier = kwargs['resource_name']
-    #    original_resource_id = find_resource_id(site,package_id,kwargs['resource_name'],API_key)
+   
     else:
         resource_specifier = kwargs['resource_id']
-    #    original_resource_id = kwargs['resource_id']
-
-    #try:
-    #    original_url = get_resource_parameter(site,original_resource_id,'url',API_key)
-    #except RuntimeError:
-    #    original_url = None
-    # It's conceivable that original_resource_id may not match resource_id (obtained
-    # below), in instances where the resource needs to be created by the pipeline.
-        # Does this original_url stuff need to be done here?
-            # Let's assume that it doesn't for now.
-
+    
     print("Preparing to pipe data from {} to resource {} package ID {} on {}".format(target,resource_specifier,package_id,site))
 
     a_pipeline = pl.Pipeline(pipe_name,
@@ -536,6 +525,7 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
             # event, a duplicate (or near duplicate) causes an error when insertions
             # are attempted.
         resource_id = clear_and_upload(kwparams)
+        print("============================================================")
 
 schema_dict = {'events': EventsSchema,
                 'events_archive': EventsArchiveSchema,
