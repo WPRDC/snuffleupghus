@@ -292,7 +292,7 @@ def query_resource(site,query,API_key=None):
     data = response['records']
     return data
 
-def query_private_resource(site,resource_id,filters,API_key=None):
+def query_private_resource(site,resource_id,filters,API_key=None,limit=99999999999):
     # Private resources can be queried using the datastore_search API 
     # endpoint, which supports filters.
     ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
@@ -300,7 +300,7 @@ def query_private_resource(site,resource_id,filters,API_key=None):
     data = response['records']
     return data
 
-def query_any_resource(site,query,resource_id,filters,API_key=None):
+def query_any_resource(site,query,resource_id,filters,API_key=None,limit=99999999999):
     ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
     # From resource ID determine package ID.
     package_id = ckan.action.resource_show(id=resource_id)['package_id']
@@ -309,7 +309,7 @@ def query_any_resource(site,query,resource_id,filters,API_key=None):
     if private:
         #print("As of February 2018, CKAN still doesn't allow you to run a datastore_search_sql query on a private dataset. Sorry. See this GitHub issue if you want to know a little more: https://github.com/ckan/ckan/issues/1954")
         #raise ValueError("CKAN can't query private resources (like {}) yet.".format(resource_id))
-        return query_private_resource(site,resource_id,filters,API_key)
+        return query_private_resource(site,resource_id,filters,API_key,limit)
     else:
         return query_resource(site,query,API_key)
 
