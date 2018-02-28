@@ -396,9 +396,7 @@ def transmit(**kwargs):
             # Let's assume that it doesn't for now.
 
     print("Preparing to pipe data from {} to resource {} package ID {} on {}".format(target,resource_specifier,package_id,site))
-    time.sleep(1.0)
 
-    print("fields_to_publish = {}".format(fields_to_publish))
     a_pipeline = pl.Pipeline(pipe_name,
                               pipe_name,
                               log_status=False,
@@ -485,11 +483,9 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
         current_year_month = datetime.strftime(datetime.now(),"%Y%m")
         if archive_resource_id is not None:
             query = "SELECT * FROM \"{}\" WHERE year_month = \'{}\' LIMIT 999999".format(archive_resource_id,current_year_month)
-            print(site,query,API_key)
             loaded_data = query_any_resource(site, query, archive_resource_id, {'year_month': current_year_month}, API_key)
             # Eventually the API key won't be needed here, once the dataset is public.
             number_of_records = len(loaded_data)
-            print(number_of_records)
             # [ ] Check whether any of the loaded_data collides with the new data. (It probably does.)
 
             if number_of_records >= len(events_shelf): # Assume that the data for the month is sufficiently complete:
@@ -513,7 +509,6 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
         if archive:
             archive_schema = schema_dict[table+'_archive']
             events_fields = archive_schema().serialize_to_ckan_fields() 
-            pprint(events_fields)
             events_fields = [events_fields[-1]] + events_fields[:-1]
             # Add year_month field to data through the schema.
             resource_id = transmit(target = events_file_path, update_method = archive_update_method, 
