@@ -296,7 +296,7 @@ def query_private_resource(site,resource_id,filters,API_key=None,limit=999999999
     # Private resources can be queried using the datastore_search API 
     # endpoint, which supports filters.
     ckan = ckanapi.RemoteCKAN(site, apikey=API_key)
-    response = ckan.action.datastore_search(id=resource_id,filters=filters)
+    response = ckan.action.datastore_search(id=resource_id,filters=filters,limit=limit)
     data = response['records']
     return data
 
