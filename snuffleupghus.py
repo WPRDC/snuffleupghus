@@ -495,10 +495,10 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
             archive_update_method = 'insert'
 
 
+        archive_schema = schema_dict[table+'_archive']
+        events_fields = archive_schema().serialize_to_ckan_fields()
+        events_fields = [events_fields[-1]] + events_fields[:-1]
         if archive:
-            archive_schema = schema_dict[table+'_archive']
-            events_fields = archive_schema().serialize_to_ckan_fields() 
-            events_fields = [events_fields[-1]] + events_fields[:-1]
             # Add year_month field to data through the schema.
             resource_id = transmit(target = events_file_path, update_method = archive_update_method, 
                 schema = archive_schema, fields_to_publish = events_fields, key_fields = key_fields,
@@ -507,9 +507,6 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
         
         ##############################################################################################
         # Also, and in any event, reate a new archive for just that month (if it doesn't already exist).
-        archive_schema = schema_dict[table+'_archive']
-        events_fields = archive_schema().serialize_to_ckan_fields() 
-        events_fields = [events_fields[-1]] + events_fields[:-1]
         # Add year_month field to data through the schema.
         now = datetime.now()
         year = now.year
