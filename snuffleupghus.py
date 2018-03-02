@@ -431,10 +431,13 @@ def clear_and_upload(kwparams):
     print("(Yes, this data is being deliberately piped to the CKAN resource twice. It has something to do with using the clear_first parameter to clear the datastore, which can only be done if the datastore has already been created, since the ETL framework is flawed.)")
     return resource_id
 
-def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,archive_resource_name,add_to_archive=False):
+def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_designation,server,add_to_archive=False):
     # Fetch all three CSV files with requests.
     #   events.csv, safePlaces.csv, services.csv
     # Then process them according to their needs.
+    resource_name = "Current List of {}".format(resource_designation)
+    archive_resource_name = "{} Archive (Cumulative)".format(resource_designation)
+
     if not fetch_files and len(sys.argv) > n+2:
         # Interpret command-line arguments (after fetch_files and server) as local filenames to use.
         events_shelf, events_headers, events_file_path = parse_file(sys.argv[n+2],table) # Where a shelf is a list of dictionaries
@@ -511,7 +514,7 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_name,server,
         now = datetime.now()
         year = now.year
         month = datetime.strftime(now,"%m")
-        month_archive_resource_name = "{}-{} {}".format(year,month,archive_resource_name)
+        month_archive_resource_name = "{}-{} {} Archive".format(year,month,resource_designation)
 
         kwparams = dict(target = events_file_path, update_method = 'insert', schema = archive_schema, 
             fields_to_publish = events_fields, key_fields = [],
@@ -537,9 +540,9 @@ def main(**kwargs):
     try:
         fetch_files = kwargs.get('fetch_files',False)
         # No primary key is used since we can't guarantee that there won't be collisions.
-        get_nth_file_and_insert(fetch_files,1,'events',key_fields = [], resource_name = "Current List of Events", server = server, archive_resource_name = "Events Archive", add_to_archive=True)
-        get_nth_file_and_insert(fetch_files,2,'safePlaces',key_fields = [], resource_name = "Current List of Safe Places", server = server, archive_resource_name = "Safe Places Archive", add_to_archive = True)
-        get_nth_file_and_insert(fetch_files,3,'services',key_fields = [], resource_name = "Current List of Services", server = server, archive_resource_name = "Services Archive",add_to_archive=True)
+        get_nth_file_and_insert(fetch_files,1,'events',key_fields = [], resource_designation = "Events", server = server, add_to_archive=True)
+        get_nth_file_and_insert(fetch_files,2,'safePlaces',key_fields = [], resource_designation = "Safe Places", server = server, add_to_archive = True)
+        get_nth_file_and_insert(fetch_files,3,'services',key_fields = [], resource_designation = "Services", server = server, add_to_archive=True)
         # The main scheme for ensuring that no duplicate rows are archived is running the 
         # script once per month, but it's necessary to make sure that it actually runs successfully!
         
