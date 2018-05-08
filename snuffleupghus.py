@@ -440,8 +440,10 @@ def get_nth_file_and_insert(fetch_files,n,table,key_fields,resource_designation,
 
     if not fetch_files and len(sys.argv) > n+2:
         # Interpret command-line arguments (after fetch_files and server) as local filenames to use.
+        print("Obtaining {} from local files.".format(table))
         events_shelf, events_headers, events_file_path = parse_file(sys.argv[n+2],table) # Where a shelf is a list of dictionaries
     elif fetch_files:
+        print("Getting {} from bigburgh.com".format(table))
         r = requests.get("http://bigburgh.com/csvdownload/{}.csv".format(table))
         dpath = '/'.join(DATA_PATH.split("/")[:-1]) + '/'
         if dpath == '/':
