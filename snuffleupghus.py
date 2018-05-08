@@ -413,14 +413,18 @@ def transmit(**kwargs):
     else:
         resource_id = kwargs['resource_id']
 
-    if a_pipeline.upload_complete:
-        print("Piped data to {} on the {} server".format(resource_specifier,server))
-        log.write("Finished {}ing {}\n".format(re.sub('e$','',update_method),resource_specifier))
-        log.close()
-        return resource_id
-    else:
-        print("Something went wrong.")
-        return None
+    print("Piped data to {} on the {} server".format(resource_specifier,server))
+    log.write("Finished {}ing {}\n".format(re.sub('e$','',update_method),resource_specifier))
+    log.close()
+    return resource_id
+    #if a_pipeline.upload_complete: # This doesn't work on earlier versions of wprdc-etl
+    #    print("Piped data to {} on the {} server".format(resource_specifier,server))
+    #    log.write("Finished {}ing {}\n".format(re.sub('e$','',update_method),resource_specifier))
+    #    log.close()
+    #    return resource_id
+    #else:
+    #    print("Something went wrong.")
+    #    return None
 
 def clear_and_upload(kwparams):
     resource_id = transmit(**kwparams) # This is a hack to get around the ETL framework's limitations. 1) Update (or create) the resource. 
