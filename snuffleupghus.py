@@ -562,7 +562,9 @@ def main(**kwargs):
         traceback_msg = ''.join('!! ' + line for line in lines)
         print(traceback_msg)  # Log it or whatever here
         msg = "snuffleupghus.py ran into an error: {}.\nHere's the traceback:\n{}".format(e,traceback_msg)
-        send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':snuffleupagus:')
+        mute_alerts = kwargs.get('mute_alerts',False)
+        if not mute_alerts:
+            send_to_slack(msg,username='snuffleupghus',channel='@david',icon=':snuffleupagus:')
 
 if __name__ == '__main__':
     print(sys.argv)
@@ -570,4 +572,7 @@ if __name__ == '__main__':
         print("At a minimum, the fetch_files and server parameters must be specified as the first two command-line parameters.")
     else:
         fetch_files = (sys.argv[1].lower() == 'true')
-        main(fetch_files=fetch_files,server=sys.argv[2])
+        mute_alerts = False
+        if len(sys.argv) > 3:
+            mute_alerts = bool(sys.argv[3])
+        main(fetch_files=fetch_files,server=sys.argv[2],mute_alerts=mute_alerts)
